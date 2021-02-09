@@ -139,7 +139,7 @@ module Jekyll
 
         # for remote URL that is hosted in cloudinary, no need to fetch again
         # construct transformation URL on-the-fly
-        is_upload = %r!https://res.cloudinary.com/#{settings["cloud_name"]}/image/upload/(?<versioned_image_name>.*)!.match(image_src)
+        is_upload = %r!https?://res.cloudinary.com/#{settings["cloud_name"]}/image/upload/(?<versioned_image_name>.*)!.match(image_src)
         if is_upload
           type = "upload"
           versioned_image_name = is_upload[:versioned_image_name]
