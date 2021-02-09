@@ -137,6 +137,19 @@ module Jekyll
         #   image_src.gsub! "url2png:", ""
         # end
 
+        # for remote URL that is hosted in cloudinary, no need to fetch again
+        # construct transformation URL on-the-fly
+        is_upload = %r!https://res.cloudinary.com/#{settings["cloud_name"]}/image/upload/(?<versioned_image_name>.*)!.match(image_src)
+        if is_upload
+          type = "upload"
+          versioned_image_name = is_upload[:versioned_image_name]
+            Jekyll.logger.info(
+              "[Cloudinary]",
+              "Detected upload type '#{image_src}', extracted \
+              versioned_image_name as '#{versioned_image_name}'"
+            )
+        end
+
         if markup[:preset]
           if settings["presets"][markup[:preset]]
             preset = preset.merge(settings["presets"][markup[:preset]])
@@ -211,11 +224,26 @@ module Jekyll
         if is_image_remote
           # It's remote
           image_dest_path = image_src
-          image_dest_url = image_src
-          natural_width, natural_height = FastImage.size(image_dest_url)
+
+          # if the delivery_type is "upload", then we don't fetch the remote URL, but instead construct transformation URL in place
+          # see: https://cloudinary.com/documentation/transformation_reference
+          # note that in this case, "image_dest_url" is a bad naming since it is actually the versioned_image_name, e.g., for:
+          #
+          # https://res.cloudinary.com/<cloud_name>/<asset_type>/<delivery_type>/<transformations>/<version>/<public_id_full_path>.<extension>
+          #
+          # it should be "<version>/<public_id_full_path>.<extension>". Technically it should be referred to as "image_dest_url_or_versioned_image_name" but it's too long.
+          # Since we still use it to construct the different width images later on for both remote and local path, I am adding this note here to make it less confusing.
+
+          if type == "upload"
+            image_dest_url = versioned_image_name
+          else
+            image_dest_url = image_src
+          end
+
+          natural_width, natural_height = FastImage.size(image_dest_path)
           if natural_width.nil?
-            Jekyll.logger.warn("remote url doesn't exists " + image_dest_url)
-            return "<img src=\"#{image_dest_url}\" />"
+            Jekyll.logger.warn("remote url doesn't exists " + image_dest_path)
+            return "<img src=\"#{image_dest_path}\" />"
           end
           width_height = "width=\"#{natural_width}\" height=\"#{natural_height}\""
           fallback_url = "https://res.cloudinary.com/#{settings["cloud_name"]}/image/#{type}/#{transformations_string}w_#{preset["fallback_max_width"]}/#{image_dest_url}"
