@@ -207,6 +207,15 @@ module Jekyll
 
         attr_string = html_attr.map { |a, v| "#{a}=\"#{v}\"" }.join(" ")
 
+        # Don't generate responsive image HTML and Cloudinary URLs for local development
+        if settings["only_prod"] && ENV["JEKYLL_ENV"] != "production"
+          if (caption || preset["figure"] == "always") && preset["figure"] != "never"
+            return "\n<figure #{attr_string}>\n<img src=\"#{image_src}\" #{img_attr} />\n<figcaption>#{caption}</figcaption>\n</figure>"
+          else
+            return "<img src=\"#{image_src}\" #{attr_string} #{img_attr} crossorigin=\"anonymous\" />"
+          end
+        end
+
         # Figure out the Cloudinary transformations
         transformations = []
         transformations_string = ""
@@ -292,15 +301,6 @@ module Jekyll
               "Couldn't find this image to check its width: #{image_src_path}."
             )
             fallback_url = image_dest_url
-          end
-        end
-
-        # Don't generate responsive image HTML and Cloudinary URLs for local development
-        if settings["only_prod"] && ENV["JEKYLL_ENV"] != "production"
-          if (caption || preset["figure"] == "always") && preset["figure"] != "never"
-            return "\n<figure #{attr_string}>\n<img src=\"#{image_src}\" #{img_attr} #{width_height} />\n<figcaption>#{caption}</figcaption>\n</figure>"
-          else
-            return "<img src=\"#{image_src}\" #{attr_string} #{img_attr} #{width_height} crossorigin=\"anonymous\" />"
           end
         end
 
